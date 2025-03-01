@@ -5,32 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NOAP</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        .player { margin-top: 20px; }
-        .track-list { list-style: none; padding: 0; }
-        .track-list li { cursor: pointer; padding: 10px; border: 1px solid #ddd; margin: 5px; }
-        .track-list li:hover { background: #f0f0f0; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .player {
+            margin-top: 20px;
+        }
+        .track-list {
+            list-style: none;
+            padding: 0;
+        }
+        .track-list li {
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin: 5px;
+        }
+        .track-list li:hover {
+            background: #f0f0f0;
+        }
+        .error {
+            color: red;
+            font-size: 16px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 
     <h1>Neu Online Audio Player</h1>
 
-    <audio id="audioPlayer" controls></audio>
+    <audio id="audioPlayer" controls>
+        Ваш браузер не поддерживает элемент <code>audio</code>.
+    </audio>
 
     <h2>Список треков</h2>
     <ul class="track-list" id="trackList"></ul>
 
+    <div class="error" id="errorMessage"></div>
+
     <script>
         // Список треков (заменяем ссылки на рабочие)
         const tracks = [
-            { title: "Night Witches", artist: "Sabaton", url: "https://www.dropbox.com/scl/fi/8quj30dl734whcs0yklqs/Sabaton_-_Night_Witches_47872487.mp3?rlkey=1j5ka6g243cplgof4g8n7rp2u&st=tdn28h77&dl=1" },
-            { title: "Kiene Lieber", artist: "Einbrecher", url: "https://www.dropbox.com/scl/fi/bhx4sjlkepdexylhp2daj/Eisbrecher-Keine-Liebe.mp3?rlkey=ol1hwlvbdboyvdfllwanltwbq&st=o8q2bptc&dl=1" }
+            { title: "Night Witches", artist: "Sabaton", url: "https://gitneu256.github.io/NOAP/audio/Sabaton_-_Night_Witches.mp3" },
+            { title: "Kiene Lieber", artist: "Einbrecher", url: "https://gitneu256.github.io/NOAP/audio/Eisbrecher - Keine Liebe.mp3" }
         ];
 
         const trackList = document.getElementById("trackList");
         const audioPlayer = document.getElementById("audioPlayer");
+        const errorMessage = document.getElementById("errorMessage");
 
+        // Добавляем треки в список
         tracks.forEach((track) => {
             const li = document.createElement("li");
             li.textContent = `${track.artist} - ${track.title}`;
@@ -39,9 +65,42 @@
         });
 
         function playTrack(track) {
-            audioPlayer.src = track.url;
-            audioPlayer.play();
+            const url = track.url;
+
+            // Проверка на доступность файла
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Ошибка загрузки: ${response.status} ${response.statusText}`);
+                    }
+                    audioPlayer.src = url;
+                    audioPlayer.play();
+                    errorMessage.textContent = ''; // Скрываем сообщение об ошибке
+                    updateMediaSession(track);
+                })
+                .catch(error => {
+                    audioPlayer.pause();
+                    errorMessage.textContent = `Ошибка: ${error.message}`;
+                });
         }
+
+        function updateMediaSession(track) {
+            if ("mediaSession" in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: track.title,
+                    artist: track.artist
+                });
+
+                navigator.mediaSession.setActionHandler("play", () => audioPlayer.play());
+                navigator.mediaSession.setActionHandler("pause", () => audioPlayer.pause());
+                navigator.mediaSession.setActionHandler("stop", () => audioPlayer.pause());
+            }
+        }
+
+        // Поддержка кнопки play для мобильных устройств
+        document.getElementById("audioPlayer").addEventListener("play", function () {
+            errorMessage.textContent = '';
+        });
     </script>
 
 </body>
